@@ -3,11 +3,11 @@ from ultralytics import YOLO
 import threading
 
 # Load the model
-yolo = YOLO("C:\\Users\\Inspection_P611\\anaconda3\\envs\\AI\\Project\\Models_Used\\PH6_Model.pt")
+yolo = YOLO("YOLO_Model.pt")
 lock = threading.Lock()
 stop_flag = False
 
-def getColours(cls_num):
+def getColours(cls_num): #Random Colour
     base_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
     color_index = cls_num % len(base_colors)
     increments = [(1, -2, 1), (-2, 1, -1), (1, -1, 2)]
@@ -21,7 +21,7 @@ def get_coordinate(rst):
     return(x1, y1, x2, y2)
 
 def capture_frames():
-    videoCap = cv2.VideoCapture("rtsp://admin:admin@192.168.65.15/profile?token=media_profile1&TO=60")
+    videoCap = cv2.VideoCapture("Your_Stream")
     while not stop_flag:
         global frame, results
         ret, frame = videoCap.read()
@@ -57,5 +57,6 @@ if __name__ == '__main__':
 
     for t in threads:
         t.join()
+
 
 cv2.destroyAllWindows()
