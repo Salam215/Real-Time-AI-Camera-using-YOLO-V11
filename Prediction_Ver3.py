@@ -52,8 +52,12 @@ def Detection_Process(frame_camera, model_path,flag_bool): #Consumer
                             x1, y1, x2 , y2 = get_coordinate(rst)
                             cls = int(box.cls[0])
                             color = getColours(cls)
+                            cx = (x1 + x2) // 2
+                            cy = (y1 + y2) // 2
+                            cv2.circle(frame, (cx,cy), 4, (0,0,255), -1)
                             cv2.rectangle(frame,(x1,y1),(x2,y2),color,2)
                             cv2.putText(frame, f'{classes_names[int(box.cls[0])]} {box.conf[0]:.2f}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+                            
                             if classes_names[cls] == 'Broken-Bag':
                                 flag_bool.value = 1
                             else:
