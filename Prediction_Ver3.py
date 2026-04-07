@@ -41,6 +41,8 @@ def Detection_Process(frame_camera, model_path,flag_bool): #Consumer
         model = YOLO(model_path)
         global stop_flag
         line = [(900,400), (500, 400)]
+        class_counts = defaultdict(int)
+        crossed_ids = set()
         while not stop_flag:
             if not frame_camera.empty():
                 frame = frame_camera.get()
@@ -48,6 +50,7 @@ def Detection_Process(frame_camera, model_path,flag_bool): #Consumer
                 for rst in results:
                     classes_names = rst.names
                     for box in rst.boxes:
+                        track_ids = results[0].boxes.id.int().cpu().tolist()
                         if box.conf[0] > 0.6:
                             x1, y1, x2 , y2 = get_coordinate(rst)
                             cls = int(box.cls[0])
@@ -57,11 +60,14 @@ def Detection_Process(frame_camera, model_path,flag_bool): #Consumer
                             cv2.circle(frame, (cx,cy), 4, (0,0,255), -1)
                             cv2.rectangle(frame,(x1,y1),(x2,y2),color,2)
                             cv2.putText(frame, f'{classes_names[int(box.cls[0])]} {box.conf[0]:.2f}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-                            
+                            if cy > 400 and track_id not in crossed_ids:
+                                crossed_ids.add(track_id)
+                                class_counts[classes_names] += 1
                             if classes_names[cls] == 'Broken-Bag':
                                 flag_bool.value = 1
                             else:
                                 flag_bool.value = 0
+                cv2.line(frame, (900,400),(500,400),(0,0,255),3)
                 cv2.namedWindow("AI Camera", cv2.WINDOW_NORMAL)
                 cv2.setWindowProperty("AI Camera", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 cv2.imshow("AI Camera", frame)
