@@ -36,38 +36,48 @@ def Detection_Process(frame_camera, model_path,flag_bool): #Consumer
 
     try:
         from ultralytics import YOLO, solutions
+        from collections import defaultdict
         import cv2,time
         time.sleep(1)
         model = YOLO(model_path)
-        global stop_flag
-        line = [(900,400), (500, 400)]
-        class_counts = defaultdict(int)
-        crossed_ids = set()
+        global stop_flag, track_ids
+        track_ids = []
+        # class_list = model.names
+        # line = [(900,400), (500, 400)]
+        class_counts = {'Broken-Bag': 0, 'Normal' : 0}
+        crossed_id = []
         while not stop_flag:
             if not frame_camera.empty():
                 frame = frame_camera.get()
                 results = model.track(frame, persist= True)
+                if results[0].boxes.id is not None:
+                    track_ids = results[0].boxes.id.int().cpu().tolist()
                 for rst in results:
                     classes_names = rst.names
                     for box in rst.boxes:
-                        track_ids = results[0].boxes.id.int().cpu().tolist()
                         if box.conf[0] > 0.6:
                             x1, y1, x2 , y2 = get_coordinate(rst)
                             cls = int(box.cls[0])
                             color = getColours(cls)
                             cx = (x1 + x2) // 2
                             cy = (y1 + y2) // 2
-                            cv2.circle(frame, (cx,cy), 4, (0,0,255), -1)
+                            #cv2.circle(frame, (cx, cy),4, (0,0,255), -1)
                             cv2.rectangle(frame,(x1,y1),(x2,y2),color,2)
                             cv2.putText(frame, f'{classes_names[int(box.cls[0])]} {box.conf[0]:.2f}', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-                            if cy > 400 and track_id not in crossed_ids:
-                                crossed_ids.add(track_id)
-                                class_counts[classes_names] += 1
                             if classes_names[cls] == 'Broken-Bag':
                                 flag_bool.value = 1
-                            else:
-                                flag_bool.value = 0
-                cv2.line(frame, (900,400),(500,400),(0,0,255),3)
+                            for track_id in track_ids:
+                                if cy < 550:
+                                    if track_id not in crossed_id:
+                                        detected = track_ids.pop()
+                                        crossed_id.append(detected)
+                                        class_counts[classes_names[cls]] = class_counts.get(classes_names[cls]) + 1 
+                print(track_ids)
+                lineheight = 0
+                for key, value in class_counts.items():
+                    cv2.putText(frame, f"{key}: {value}", (200, 200 + lineheight), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                    lineheight += 35
+                #cv2.line(frame, (900, 550), (500, 550), (0,0,255), 3)
                 cv2.namedWindow("AI Camera", cv2.WINDOW_NORMAL)
                 cv2.setWindowProperty("AI Camera", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 cv2.imshow("AI Camera", frame)
@@ -96,6 +106,7 @@ def PLC_Connection(input):
                 if bool(input.value):
                     set_bool(PLC_Data, 0,0,1)
                     plc.write_area(snap7.type.Areas.MK, 0, 0 , PLC_Data)
+                    input.value = 0
                 else:
                     continue
     except KeyboardInterrupt:
